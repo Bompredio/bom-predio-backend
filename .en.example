@@ -1,0 +1,8 @@
+PORT=3000
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=service_role_key_here
+SUPABASE_ANON_KEY=anon_key_here
+OPENAI_KEY=sk-xxxxx
+JWT_SECRET=alguma_string_secreta
+SUPABASE_STORAGE_BUCKET=documents
+BASE_URL=https://seu-backend.onrender.com
