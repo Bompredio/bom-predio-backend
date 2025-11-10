@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Bom Prédio API
+  version: "1.0.0"
+  description: >
+    API do MVP Bom Prédio — Marketplace + ERP básico + Documentos + Assembleias.
+    GDPR: banco e storage devem ficar na região EU (Supabase).
+servers:
+  - url: https://api.example.com
+    description: Production (replace with Render/Railway URL)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    AuthRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+    Condominio:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        endereco:
+          type: string
+        cidade:
+          type: string
+        unidades:
+          type: integer
+    Unidade:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        condominio_id:
+          type: string
+        numero:
+          type: string
+        proprietario:
+          type: string
+    Assembleia:
+      type: object
+      properties:
+        id:
+          type: string
+        condominio_id:
+          type: string
+        pauta:
+          type: string
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+        rtc_room:
+          type: string
+    Voto:
+      type: object
+      properties:
+        id:
+          type: string
+        assembleia_id:
+          type: string
+        usuario_id:
+          type: string
+        escolha:
+          type: string
+    DocGenerateRequest:
+      type: object
+      properties:
+        assembleia_id:
+          type: string
+        transcript:
+          type: string
+      required: [transcript]
+    DocGenerateResponse:
+      type: object
+      properties:
+        ata_text:
+          type: string
+        pdf_url:
+          type: string
+    Lancamento:
+      type: object
+      properties:
+        id:
+          type: string
+        condominio_id:
+          type: string
+        descricao:
+          type: string
+        valor:
+          type: number
+        data_lancamento:
+          type: string
+          format: date
+paths:
+
+  /auth/login:
+    post:
+      summary: Login (Supabase Auth or custom)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /condominios:
+    get:
+      summary: List condomínios
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de condomínios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Condominio'
+    post:
+      summary: Create condominio
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Condominio'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Condominio'
+
+  /unidades:
+    get:
+      summary: List unidades (optionally filter by condominio_id)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: condominio_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de unidades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Unidade'
+    post:
+      summary: Create unidade
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Unidade'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unidade'
+
+  /assembleias:
+    get:
+      summary: List assembleias (filter by condominio)
+      parameters:
+        - in: query
+          name: condominio_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de assembleias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assembleia'
+    post:
+      summary: Create assembleia (server generates rtc_room/Jitsi link)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                condominio_id:
+                  type: string
+                pauta:
+                  type: string
+                start_at:
+                  type: string
+                  format: date-time
+                end_at:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assembleia'
+
+  /votos:
+    post:
+      summary: Registrar voto em assembleia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Voto'
+      responses:
+        '201':
+          description: Voto criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Voto'
+
+  /docs/gerar-ata:
+    post:
+      summary: Gerar ata a partir de transcript (OpenAI + PDF)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocGenerateRequest'
+      responses:
+        '200':
+          description: Ata gerada (URL do PDF)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocGenerateResponse'
+
+  /erp/lancamentos:
+    get:
+      summary: List lancamentos (filter by condominio_id)
+      parameters:
+        - in: query
+          name: condominio_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de lançamentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lancamento'
+    post:
+      summary: Criar lançamento financeiro
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Lancamento'
+      responses:
+        '201':
+          description: Lancamento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lancamento'
+
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
